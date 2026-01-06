@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日飲食自我監控紀錄表</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .client-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .client-info input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .client-info input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: "🍽️";
+            margin-right: 10px;
+            font-size: 24px;
+        }
+
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .food-item {
+            position: relative;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .food-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .food-item.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .food-item input[type="checkbox"] {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .food-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .food-label {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            background: white;
+        }
+
+        .portion-selector {
+            padding: 10px;
+            background: #f8f9ff;
+            display: none;
+        }
+
+        .food-item.selected .portion-selector {
+            display: block;
+        }
+
+        .portion-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .cooking-selector {
+            margin-top: 8px;
+        }
+
+        .cooking-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ff9800;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .custom-input {
+            margin-top: 8px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-top: 10px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #00c853;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #00a844;
+            transform: translateY(-2px);
+        }
+
+        .btn-history {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-history:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .history-item {
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f8f9ff;
+        }
+
+        .history-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+        }
+
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .food-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);">
+                    Fit21
+                </div>
+            </div>
+            <h1>🍽️ 每日飲食自我監控紀錄表</h1>
+            <p style="color: #666; margin-top: 10px;">午餐/外食版</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 使用說明</h3>
+            <ol>
+                <li>請填寫您的基本資料</li>
+                <li>點選您今天吃的食物(可多選)</li>
+                <li>選擇食物份量</li>
+                <li>完成後點「生成紀錄PDF」</li>
+            </ol>
+        </div>
+
+        <div class="client-info">
+            <input type="text" id="clientName" placeholder="姓名" required>
+            <input type="date" id="recordDate" required>
+            <select id="mealType">
+                <option value="午餐">午餐</option>
+                <option value="晚餐">晚餐</option>
+            </select>
+            <select id="locationType">
+                <option value="外食">外食</option>
+                <option value="自煮">自煮</option>
+            </select>
+        </div>
+
+        <!-- 第一部分：主要蛋白質來源 -->
+        <div class="section">
+            <div class="section-title">第一部分：主要蛋白質來源</div>
+            <div class="food-grid" id="proteinSection">
+                <!-- 蛋白質選項 -->
+            </div>
+        </div>
+
+        <!-- 第二部分：碳水化合物 -->
+        <div class="section">
+            <div class="section-title">第二部分：碳水化合物</div>
+            <div class="food-grid" id="carbsSection">
+                <!-- 碳水選項 -->
+            </div>
+        </div>
+
+        <!-- 第三部分：蔬菜攝取 -->
+        <div class="section">
+            <div class="section-title">第三部分：蔬菜攝取</div>
+            <div class="food-grid" id="veggiesSection">
+                <!-- 蔬菜選項 -->
+            </div>
+        </div>
+
+        <!-- 第四部分：水果紀錄 -->
+        <div class="section">
+            <div class="section-title">第四部分：水果紀錄</div>
+            <div class="food-grid" id="fruitSection">
+                <!-- 水果選項 -->
+            </div>
+        </div>
+
+        <!-- 備註 -->
+        <div class="section">
+            <div class="section-title">💭 備註</div>
+            <textarea id="notes" class="text-input" placeholder="其他想記錄的事項..."></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-history" onclick="showHistory()">
+                📚 查看紀錄
+            </button>
+            <button class="btn btn-primary" onclick="generatePDF()">
+                📄 生成紀錄PDF
+            </button>
+            <button class="btn btn-secondary" onclick="shareToLine()">
+                💬 分享到Line
+            </button>
+        </div>
+    </div>
+
+    <!-- 歷史紀錄 Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeHistory()">&times;</span>
+            <h2 style="color: #667eea; margin-bottom: 20px;">📚 我的飲食紀錄</h2>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        // 食物資料庫
+        const foodDatabase = {
+            protein: [
+                {name: '豬肉', emoji: '🥓', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎']},
+                {name: '雞肉', emoji: '🍗', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎']},
+                {name: '牛肉', emoji: '🥩', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎']},
+                {name: '魚肉', emoji: '🐟', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎']},
+                {name: '蛋', emoji: '🥚', portions: ['1顆', '2顆', '3顆'], cooking: ['水煮蛋', '蒸蛋', '炒蛋(少油)', '炒蛋(多油)', '煎蛋(少油)', '煎蛋(多油)', '滷蛋', '茶葉蛋']},
+                {name: '豆腐', emoji: '🧈', portions: ['半盒', '1盒', '1.5盒'], cooking: ['清蒸', '水煮/湯', '炒(少油)', '炒(多油)', '油炸', '滷', '涼拌']},
+                {name: '海鮮', emoji: '🦐', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎']},
+                {name: '其他', emoji: '🍖', portions: ['雞蛋大小', '撲克牌大小', '手掌大小'], cooking: ['清蒸/水煮', '炒(少油)', '炒(多油)', '油炸', '滷/燉', '烤', '煎'], needsCustom: true, needsNote: true}
+            ],
+            carbs: [
+                {name: '白飯', emoji: '🍚', portions: ['1/4碗', '1/2碗', '3/4碗', '1碗', '>1碗']},
+                {name: '糙米飯', emoji: '🍙', portions: ['1/4碗', '1/2碗', '3/4碗', '1碗', '>1碗']},
+                {name: '麵條', emoji: '🍝', portions: ['1/4碗', '1/2碗', '3/4碗', '1碗', '>1碗']},
+                {name: '麵包', emoji: '🍞', portions: ['1片', '2片', '3片']},
+                {name: '地瓜', emoji: '🍠', portions: ['半個拳頭', '1個拳頭', '1.5個拳頭']},
+                {name: '馬鈴薯', emoji: '🥔', portions: ['半個拳頭', '1個拳頭', '1.5個拳頭']},
+                {name: '其他', emoji: '🥟', needsCustom: true, needsQuantity: true}
+            ],
+            veggies: [
+                {name: '深綠色蔬菜(熟)', emoji: '🥬', portions: ['少於1/2碗', '約1/2碗', '約1碗', '超過1碗']},
+                {name: '淺色蔬菜(熟)', emoji: '🥗', portions: ['少於1/2碗', '約1/2碗', '約1碗', '超過1碗']},
+                {name: '菇類(熟)', emoji: '🍄', portions: ['少於1/2碗', '約1/2碗', '約1碗', '超過1碗']},
+                {name: '豆莢類(熟)', emoji: '🫛', portions: ['少於1/2碗', '約1/2碗', '約1碗', '超過1碗']},
+                {name: '生菜沙拉', emoji: '🥗', portions: ['1個手掌', '2個手掌', '3個手掌', '4個手掌']}
+            ],
+            fruit: [
+                {name: '蘋果', emoji: '🍎', portions: ['小於拳頭', '約拳頭大', '大於拳頭']},
+                {name: '香蕉', emoji: '🍌', portions: ['半根', '1根', '2根']},
+                {name: '柳橙', emoji: '🍊', portions: ['小於拳頭', '約拳頭大', '大於拳頭']},
+                {name: '葡萄', emoji: '🍇', portions: ['小於拳頭', '約拳頭大', '大於拳頭']},
+                {name: '其他水果', emoji: '🫐', needsCustom: true, needsQuantity: true}
+            ]
+        };
+
+        // 初始化頁面
+        function init() {
+            document.getElementById('recordDate').valueAsDate = new Date();
+            renderFoodSection('proteinSection', foodDatabase.protein);
+            renderFoodSection('carbsSection', foodDatabase.carbs);
+            renderFoodSection('veggiesSection', foodDatabase.veggies);
+            renderFoodSection('fruitSection', foodDatabase.fruit);
+        }
+
+        // 渲染食物選項
+        function renderFoodSection(sectionId, foods) {
+            const section = document.getElementById(sectionId);
+            foods.forEach((food, index) => {
+                const foodItem = document.createElement('div');
+                foodItem.className = 'food-item';
+                
+                let portionSelector = '';
+                let cookingSelector = '';
+                let customInput = '';
+                let quantityInput = '';
+                let noteInput = '';
+                
+                // 份量選擇器
+                if (food.portions) {
+                    portionSelector = `
+                        <div class="portion-selector-inner">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">份量:</label>
+                            <select id="${sectionId}_${index}_portion">
+                                ${food.portions.map(p => `<option value="${p}">${p}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+                
+                // 烹調方式選擇器
+                if (food.cooking) {
+                    cookingSelector = `
+                        <div class="cooking-selector">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">烹調方式:</label>
+                            <select id="${sectionId}_${index}_cooking">
+                                ${food.cooking.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+                
+                // 自訂品項輸入框
+                if (food.needsCustom) {
+                    customInput = `
+                        <div class="custom-input">
+                            <input type="text" id="${sectionId}_${index}_custom" placeholder="請填寫品項..." style="width: 100%; padding: 8px; border: 2px solid #667eea; border-radius: 5px; margin-top: 8px; font-size: 14px;">
+                        </div>
+                    `;
+                }
+                
+                // 數量輸入框
+                if (food.needsQuantity) {
+                    const unit = food.quantityUnit || '個/顆/片';
+                    quantityInput = `
+                        <div class="quantity-input">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">數量:</label>
+                            <input type="text" id="${sectionId}_${index}_quantity" placeholder="例: 10顆、3片" style="width: 100%; padding: 8px; border: 2px solid #ff9800; border-radius: 5px; font-size: 14px;">
+                            <small style="color: #999; font-size: 11px;">${unit}</small>
+                        </div>
+                    `;
+                }
+                
+                // 備註輸入框
+                if (food.needsNote) {
+                    noteInput = `
+                        <div class="note-input">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">備註:</label>
+                            <textarea id="${sectionId}_${index}_note" placeholder="其他說明..." style="width: 100%; padding: 8px; border: 2px solid #999; border-radius: 5px; font-size: 13px; min-height: 50px; resize: vertical;"></textarea>
+                        </div>
+                    `;
+                }
+                
+                foodItem.innerHTML = `
+                    <input type="checkbox" id="${sectionId}_${index}" onchange="toggleFood(this, '${sectionId}_${index}')">
+                    <div class="food-image">${food.emoji}</div>
+                    <div class="food-label">${food.name}</div>
+                    <div class="portion-selector">
+                        ${portionSelector}
+                        ${cookingSelector}
+                        ${customInput}
+                        ${quantityInput}
+                        ${noteInput}
+                    </div>
+                `;
+                section.appendChild(foodItem);
+            });
+        }
+
+        // 切換食物選擇
+        function toggleFood(checkbox, id) {
+            const foodItem = checkbox.closest('.food-item');
+            if (checkbox.checked) {
+                foodItem.classList.add('selected');
+            } else {
+                foodItem.classList.remove('selected');
+            }
+        }
+
+        // 收集選擇的資料
+        function collectData() {
+            const data = {
+                name: document.getElementById('clientName').value,
+                date: document.getElementById('recordDate').value,
+                mealType: document.getElementById('mealType').value,
+                locationType: document.getElementById('locationType').value,
+                protein: getSelectedFoods('proteinSection', foodDatabase.protein),
+                carbs: getSelectedFoods('carbsSection', foodDatabase.carbs),
+                veggies: getSelectedFoods('veggiesSection', foodDatabase.veggies),
+                fruit: getSelectedFoods('fruitSection', foodDatabase.fruit),
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().toISOString()
+            };
+            return data;
+        }
+
+        function getSelectedFoods(sectionId, foodList) {
+            const selected = [];
+            foodList.forEach((food, index) => {
+                const checkbox = document.getElementById(`${sectionId}_${index}`);
+                if (checkbox && checkbox.checked) {
+                    const item = {
+                        name: food.name,
+                        emoji: food.emoji
+                    };
+                    
+                    // 份量
+                    const portionSelect = document.getElementById(`${sectionId}_${index}_portion`);
+                    if (portionSelect) {
+                        item.portion = portionSelect.value;
+                    }
+                    
+                    // 烹調方式
+                    const cookingSelect = document.getElementById(`${sectionId}_${index}_cooking`);
+                    if (cookingSelect) {
+                        item.cooking = cookingSelect.value;
+                    }
+                    
+                    // 自訂品項名稱
+                    const customInput = document.getElementById(`${sectionId}_${index}_custom`);
+                    if (customInput) {
+                        item.customName = customInput.value || '未填寫';
+                    }
+                    
+                    // 數量
+                    const quantityInput = document.getElementById(`${sectionId}_${index}_quantity`);
+                    if (quantityInput) {
+                        item.quantity = quantityInput.value || '未填寫';
+                    }
+                    
+                    // 備註
+                    const noteInput = document.getElementById(`${sectionId}_${index}_note`);
+                    if (noteInput && noteInput.value) {
+                        item.note = noteInput.value;
+                    }
+                    
+                    selected.push(item);
+                }
+            });
+            return selected;
+        }
+
+        // 生成 PDF
+        async function generatePDF() {
+            const data = collectData();
+            
+            if (!data.name || !data.date) {
+                alert('請填寫姓名和日期！');
+                return;
+            }
+
+            // 儲存到本地記錄
+            saveToHistory(data);
+
+            // 創建 PDF 內容
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // 設置中文字體支持
+            doc.setFont('helvetica');
+            
+            let y = 20;
+            
+            // Fit21 品牌
+            doc.setFontSize(16);
+            doc.setTextColor(102, 126, 234);
+            doc.text('Fit21', 105, y, { align: 'center' });
+            y += 10;
+            
+            // 標題
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(20);
+            doc.text('每日飲食自我監控紀錄表', 105, y, { align: 'center' });
+            y += 15;
+            
+            // 基本資訊
+            doc.setFontSize(12);
+            doc.text(`姓名: ${data.name}`, 20, y);
+            doc.text(`日期: ${data.date}`, 120, y);
+            y += 10;
+            doc.text(`餐別: ${data.mealType}`, 20, y);
+            doc.text(`類型: ${data.locationType}`, 120, y);
+            y += 15;
+            
+            // 蛋白質
+            if (data.protein.length > 0) {
+                doc.setFontSize(14);
+                doc.text('主要蛋白質來源:', 20, y);
+                y += 8;
+                doc.setFontSize(11);
+                data.protein.forEach(item => {
+                    let text = `- ${item.name}`;
+                    if (item.customName) {
+                        text += ` (${item.customName})`;
+                    }
+                    if (item.portion) {
+                        text += `: ${item.portion}`;
+                    }
+                    if (item.cooking) {
+                        text += ` [${item.cooking}]`;
+                    }
+                    doc.text(text, 25, y);
+                    y += 7;
+                    if (item.note) {
+                        doc.setFontSize(10);
+                        doc.text(`  備註: ${item.note}`, 30, y);
+                        y += 6;
+                        doc.setFontSize(11);
+                    }
+                });
+                y += 5;
+            }
+            
+            // 碳水化合物
+            if (data.carbs.length > 0) {
+                doc.setFontSize(14);
+                doc.text('碳水化合物:', 20, y);
+                y += 8;
+                doc.setFontSize(11);
+                data.carbs.forEach(item => {
+                    let text = `- ${item.name}`;
+                    if (item.customName) {
+                        text += ` (${item.customName})`;
+                    }
+                    if (item.quantity) {
+                        text += `: ${item.quantity}`;
+                    } else if (item.portion) {
+                        text += `: ${item.portion}`;
+                    }
+                    doc.text(text, 25, y);
+                    y += 7;
+                });
+                y += 5;
+            }
+            
+            // 蔬菜
+            if (data.veggies.length > 0) {
+                doc.setFontSize(14);
+                doc.text('蔬菜攝取:', 20, y);
+                y += 8;
+                doc.setFontSize(11);
+                data.veggies.forEach(item => {
+                    let text = `- ${item.name}`;
+                    if (item.quantity) {
+                        text += `: ${item.quantity}`;
+                    } else if (item.portion) {
+                        text += `: ${item.portion}`;
+                    }
+                    doc.text(text, 25, y);
+                    y += 7;
+                });
+                y += 5;
+            }
+            
+            // 水果
+            if (data.fruit.length > 0) {
+                doc.setFontSize(14);
+                doc.text('水果紀錄:', 20, y);
+                y += 8;
+                doc.setFontSize(11);
+                data.fruit.forEach(item => {
+                    let text = `- ${item.name}`;
+                    if (item.customName) {
+                        text += ` (${item.customName})`;
+                    }
+                    if (item.quantity) {
+                        text += `: ${item.quantity}`;
+                    } else if (item.portion) {
+                        text += `: ${item.portion}`;
+                    }
+                    doc.text(text, 25, y);
+                    y += 7;
+                });
+                y += 5;
+            }
+            
+            // 備註
+            if (data.notes) {
+                doc.setFontSize(14);
+                doc.text('備註:', 20, y);
+                y += 8;
+                doc.setFontSize(11);
+                const notesLines = doc.splitTextToSize(data.notes, 170);
+                doc.text(notesLines, 25, y);
+            }
+            
+            // 儲存 PDF
+            const fileName = `飲食紀錄_${data.name}_${data.date}.pdf`;
+            doc.save(fileName);
+            
+            alert('PDF已生成！您可以透過下方按鈕分享到Line');
+        }
+
+        // 儲存到歷史紀錄
+        function saveToHistory(data) {
+            let history = JSON.parse(localStorage.getItem('dietHistory') || '[]');
+            history.unshift(data);
+            // 只保留最近30筆
+            history = history.slice(0, 30);
+            localStorage.setItem('dietHistory', JSON.stringify(history));
+        }
+
+        // 顯示歷史紀錄
+        function showHistory() {
+            const history = JSON.parse(localStorage.getItem('dietHistory') || '[]');
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #666;">尚無紀錄</p>';
+            } else {
+                historyList.innerHTML = history.map(record => `
+                    <div class="history-item">
+                        <h3>${record.name} - ${record.date} (${record.mealType})</h3>
+                        ${record.protein.length > 0 ? `<p><strong>🥩 蛋白質:</strong><br>${record.protein.map(p => {
+                            let text = `${p.name}`;
+                            if (p.customName) text += `(${p.customName})`;
+                            if (p.portion) text += ` - ${p.portion}`;
+                            if (p.cooking) text += ` [${p.cooking}]`;
+                            if (p.note) text += `<br>&nbsp;&nbsp;&nbsp;&nbsp;💭 ${p.note}`;
+                            return text;
+                        }).join('<br>')}</p>` : ''}
+                        ${record.carbs.length > 0 ? `<p><strong>🍚 碳水:</strong><br>${record.carbs.map(c => {
+                            let text = c.name;
+                            if (c.customName) text += `(${c.customName})`;
+                            if (c.quantity) text += ` - ${c.quantity}`;
+                            else if (c.portion) text += ` - ${c.portion}`;
+                            return text;
+                        }).join('<br>')}</p>` : ''}
+                        ${record.veggies.length > 0 ? `<p><strong>🥬 蔬菜:</strong><br>${record.veggies.map(v => {
+                            let text = v.name;
+                            if (v.quantity) text += ` - ${v.quantity}`;
+                            else if (v.portion) text += ` - ${v.portion}`;
+                            return text;
+                        }).join('<br>')}</p>` : ''}
+                        ${record.fruit.length > 0 ? `<p><strong>🍎 水果:</strong><br>${record.fruit.map(f => {
+                            let text = f.name;
+                            if (f.customName) text += `(${f.customName})`;
+                            if (f.quantity) text += ` - ${f.quantity}`;
+                            else if (f.portion) text += ` - ${f.portion}`;
+                            return text;
+                        }).join('<br>')}</p>` : ''}
+                        ${record.notes ? `<p><strong>💭 備註:</strong> ${record.notes}</p>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('historyModal').classList.add('active');
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').classList.remove('active');
+        }
+
+        // 分享到 Line
+        function shareToLine() {
+            const data = collectData();
+            
+            if (!data.name || !data.date) {
+                alert('請先填寫姓名和日期！');
+                return;
+            }
+            
+            // 生成分享文字
+            let shareText = `【Fit21 飲食紀錄】\n\n📋 飲食紀錄\n姓名: ${data.name}\n日期: ${data.date}\n餐別: ${data.mealType}\n\n`;
+            
+            if (data.protein.length > 0) {
+                shareText += `🥩 蛋白質:\n${data.protein.map(p => {
+                    let text = `- ${p.name}`;
+                    if (p.customName) text += ` (${p.customName})`;
+                    if (p.portion) text += `: ${p.portion}`;
+                    if (p.cooking) text += ` [${p.cooking}]`;
+                    if (p.note) text += `\n  💭 ${p.note}`;
+                    return text;
+                }).join('\n')}\n\n`;
+            }
+            if (data.carbs.length > 0) {
+                shareText += `🍚 碳水:\n${data.carbs.map(c => {
+                    let text = `- ${c.name}`;
+                    if (c.customName) text += ` (${c.customName})`;
+                    if (c.quantity) text += `: ${c.quantity}`;
+                    else if (c.portion) text += `: ${c.portion}`;
+                    return text;
+                }).join('\n')}\n\n`;
+            }
+            if (data.veggies.length > 0) {
+                shareText += `🥬 蔬菜:\n${data.veggies.map(v => {
+                    let text = `- ${v.name}`;
+                    if (v.quantity) text += `: ${v.quantity}`;
+                    else if (v.portion) text += `: ${v.portion}`;
+                    return text;
+                }).join('\n')}\n\n`;
+            }
+            if (data.fruit.length > 0) {
+                shareText += `🍎 水果:\n${data.fruit.map(f => {
+                    let text = `- ${f.name}`;
+                    if (f.customName) text += ` (${f.customName})`;
+                    if (f.quantity) text += `: ${f.quantity}`;
+                    else if (f.portion) text += `: ${f.portion}`;
+                    return text;
+                }).join('\n')}\n\n`;
+            }
+            if (data.notes) {
+                shareText += `💭 備註: ${data.notes}`;
+            }
+            
+            // 使用 Line 分享 API
+            const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
+            window.open(lineUrl, '_blank');
+        }
+
+        // 頁面載入時初始化
+        window.onload = init;
+    </script>
+</body>
+</html>
